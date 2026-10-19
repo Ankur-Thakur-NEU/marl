@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MARL — hiking layers for heat and rain</title>
+<meta name="description" content="A pre-sample US hiking brand. The lab result goes on the card. Cut where the founder can stand on the line." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --iron: #10120e;
+    --iron-2: #181b16;
+    --stone: #e7e1d4;
+    --stone-dim: #b7b1a4;
+    --muted: #8d877c;
+    --indigo: #1e2a4a;
+    --indigo-2: #2c3d6b;
+    --signal: #ff4d1c;
+    --line: rgba(231, 225, 212, 0.14);
+    --ok: #d6ff4a;
+    --pad: clamp(20px, 4vw, 56px);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--iron); color: var(--stone); }
+  body {
+    font-family: "Instrument Sans", "Avenir Next", "Segoe UI", sans-serif;
+    overflow: hidden;
+    background-image:
+      radial-gradient(circle, rgba(231, 225, 212, 0.22) 1px, transparent 1.2px);
+    background-size: 22px 22px;
+    background-position: 0 0;
+  }
+  button, a { font: inherit; color: inherit; }
+  .deck { height: 100%; position: relative; }
+  .slide {
+    position: absolute;
+    inset: 0;
+    padding: 76px var(--pad) 88px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(18px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+  }
+  .slide.on { opacity: 1; pointer-events: auto; transform: none; }
+  .kicker {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--signal);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-size: clamp(64px, 12vw, 148px);
+    line-height: 0.86;
+    letter-spacing: -0.045em;
+    font-weight: 600;
+    margin: 0;
+  }
+  h2 {
+    font-size: clamp(36px, 5.4vw, 72px);
+    line-height: 0.96;
+    letter-spacing: -0.04em;
+    font-weight: 560;
+    margin: 0;
+    max-width: 16ch;
+  }
+  .lede {
+    max-width: 38rem;
+    font-size: clamp(18px, 2vw, 24px);
+    line-height: 1.35;
+    color: var(--stone-dim);
+    margin: 22px 0 0;
+  }
+  .topbar, .bottombar {
+    position: fixed;
+    left: 0; right: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px var(--pad);
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--stone-dim);
+    mix-blend-mode: normal;
+  }
+  .topbar { top: 0; }
+  .bottombar { bottom: 0; gap: 16px; }
+  .mark { color: var(--stone); letter-spacing: 0.28em; font-weight: 500; }
+  .rail {
+    position: fixed;
+    top: 72px;
+    bottom: 72px;
+    right: 18px;
+    width: 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 7px;
+    z-index: 6;
+  }
+  .rail button {
+    width: 10px;
+    height: 10px;
+    margin-left: auto;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .rail button i {
+    display: block;
+    height: 2px;
+    width: 10px;
+    background: rgba(231, 225, 212, 0.28);
+  }
+  .rail button.on i { width: 22px; background: var(--signal); }
+  .navbtns { display: flex; gap: 8px; }
+  .navbtns button, .ghost {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--stone);
+    padding: 8px 12px;
+    cursor: pointer;
+    letter-spacing: 0.12em;
+  }
+  .navbtns button:hover, .ghost:hover { border-color: var(--stone); }
+  .progress {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 3px;
+    background: rgba(231, 225, 212, 0.08);
+    z-index: 7;
+  }
+  .progress span {
+    display: block;
+    height: 100%;
+    background: var(--signal);
+    width: 0;
+    transition: width 0.35s ease;
+  }
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 36px;
+    align-items: end;
+    width: 100%;
+  }
+  .prices { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+  .prices li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 18px;
+    padding: 9px 0;
+    border-top: 1px solid var(--line);
+    font-size: 15px;
+  }
+  .prices li:last-child { border-bottom: 1px solid var(--line); }
+  .prices b { font-weight: 560; }
+  .prices em { font-style: normal; color: var(--muted); font-size: 13px; }
+  .prices .num {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    color: var(--stone);
+    white-space: nowrap;
+  }
+  .note {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+    text-transform: none;
+    max-width: 46rem;
+    line-height: 1.45;
+    margin-top: 16px;
+  }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; width: 100%; }
+  .card {
+    background: rgba(16, 18, 14, 0.72);
+    border: 1px solid var(--line);
+    padding: 18px 16px 16px;
+    min-height: 180px;
+    backdrop-filter: blur(2px);
+  }
+  .card .n {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    color: var(--signal);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+  }
+  .card h3 { margin: 12px 0 8px; font-size: 28px; letter-spacing: -0.03em; font-weight: 560; }
+  .card p { margin: 0; color: var(--stone-dim); line-height: 1.35; font-size: 15px; }
+  .card strong { color: var(--stone); font-weight: 560; }
+  .clock { width: 100%; border-collapse: collapse; font-size: 15px; }
+  .clock th, .clock td {
+    text-align: left;
+    padding: 10px 12px 10px 0;
+    border-top: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .clock th {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 500;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--signal);
+    white-space: nowrap;
+    width: 11rem;
+  }
+  .fails { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; margin-top: 8px; }
+  .fails div { border-top: 1px solid var(--line); padding-top: 12px; }
+  .fails h3 { margin: 0 0 6px; font-size: 20px; font-weight: 560; letter-spacing: -0.02em; }
+  .fails p { margin: 0; color: var(--stone-dim); line-height: 1.35; }
+  .ask {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 28px;
+    align-items: end;
+  }
+  .figure {
+    font-size: clamp(42px, 6vw, 84px);
+    letter-spacing: -0.05em;
+    line-height: 0.9;
+    margin: 0;
+  }
+  .figure span { display: block; font-size: 0.34em; letter-spacing: 0; color: var(--stone-dim); margin-top: 10px; max-width: 22ch; line-height: 1.25; }
+  .pill {
+    display: inline-block;
+    border: 1px solid var(--signal);
+    color: var(--signal);
+    padding: 3px 8px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .overview {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: rgba(16, 18, 14, 0.94);
+    padding: 72px var(--pad) 40px;
+    overflow: auto;
+  }
+  body.ov .overview { display: block; }
+  body.ov .slide, body.ov .rail { visibility: hidden; }
+  .overview h2 { font-size: 28px; margin-bottom: 18px; }
+  .ovgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .ovgrid button {
+    text-align: left;
+    background: var(--iron-2);
+    border: 1px solid var(--line);
+    padding: 14px;
+    cursor: pointer;
+    min-height: 92px;
+  }
+  .ovgrid button.on { border-color: var(--signal); }
+  .ovgrid small {
+    display: block;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    color: var(--signal);
+    letter-spacing: 0.12em;
+    margin-bottom: 8px;
+  }
+  .help {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgba(16, 18, 14, 0.92);
+    place-items: center;
+  }
+  body.help .help { display: grid; }
+  .help div {
+    border: 1px solid var(--line);
+    padding: 28px;
+    max-width: 420px;
+    background: var(--iron);
+  }
+  .help p { margin: 8px 0; color: var(--stone-dim); }
+  kbd {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    border: 1px solid var(--line);
+    padding: 1px 6px;
+    color: var(--stone);
+  }
+  @media (max-width: 800px) {
+    .grid2, .cards, .ask, .fails { grid-template-columns: 1fr; }
+    .rail { display: none; }
+    h2 { max-width: none; }
+    .slide { justify-content: flex-start; padding-top: 78px; overflow: auto; }
+    .clock th { width: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .slide { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="mark">MARL</div>
+    <div id="count">01 / 13</div>
+  </header>
+
+  <main class="deck" id="deck">
+    <section class="slide on" data-title="Open">
+      <p class="kicker">A US hiking brand · pre-sample · October 2026</p>
+      <h1>MARL</h1>
+      <p class="lede">Hiking layers for heat and rain. The test result printed on the card. Cut where the founder can stand on the line.</p>
+    </section>
+
+    <section class="slide" data-title="The slot">
+      <p class="kicker">The slot</p>
+      <div class="grid2">
+        <h2>The wall is full at the bottom and full at the top.</h2>
+        <div>
+          <p class="lede" style="margin-top:0">Under about $190, the hiker already has REI’s own jacket and Patagonia. Above $500, they are buying Arc’teryx or Gore. The open band is a judgment, not a quote: a humid-climate shell around $229–$279.</p>
+          <p class="note">Matching Torrentshell’s $179–$189 from a cold start, at a few hundred pieces, is not a plan. India does not get to undercut Patagonia’s Vietnam volume.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="The wall">
+      <p class="kicker">Shelf prices, October 2026 · sale prices ignored</p>
+      <h2 style="font-size:clamp(28px,3vw,40px); max-width:none; margin-bottom:18px">What a hiker can already buy.</h2>
+      <ul class="prices">
+        <li><span><b>REI XeroCloud 3L</b> <em>REI’s own jacket</em></span><span class="num">$189</span></li>
+        <li><span><b>Patagonia Torrentshell 3L</b> <em>50D recycled nylon, PFC-free DWR</em></span><span class="num">$179–$189</span></li>
+        <li><span><b>Outdoor Research Foray 3L</b> <em>the breathable shell to beat</em></span><span class="num">$260</span></li>
+        <li><span><b>Berghaus Rain-Motion</b> <em>Pertex, at REI</em></span><span class="num">$300</span></li>
+        <li><span><b>Arc’teryx Beta SL</b> <em>list</em></span><span class="num">$500</span></li>
+        <li><span><b>Berghaus Extrem Vanguard</b> <em>Gore-Tex ePE</em></span><span class="num">$710</span></li>
+      </ul>
+      <p class="note">Read off brand and REI pages in October 2026. Torrentshell appeared at both $179 and $189. These move. None of them is a Marl test.</p>
+    </section>
+
+    <section class="slide" data-title="What fails">
+      <p class="kicker">What actually fails on the trail</p>
+      <h2>Not a bigger millimeter number.</h2>
+      <div class="fails" style="margin-top:28px">
+        <div>
+          <h3>The face</h3>
+          <p>Pack straps and cuffs shred light cloth. The useful class is a 40–70 denier nylon, in the neighborhood of Foray and Torrentshell.</p>
+        </div>
+        <div>
+          <h3>The finish</h3>
+          <p>PFC-free DWR is the law in California and New York. It also wears off. Pretending it lasts like the old chemistry is how returns start.</p>
+        </div>
+        <div>
+          <h3>The seam</h3>
+          <p>Tape peels. Zippers die at the slider. A waterproof cloth still leaks at every needle hole until it is taped.</p>
+        </div>
+        <div>
+          <h3>The seat</h3>
+          <p>Trail pants blow out where a hiker sits and steps. A pattern that only looks technical does not survive a week.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Three products">
+      <p class="kicker">Production order · the shell is the reason, and it is not first</p>
+      <div class="cards">
+        <article class="card">
+          <div class="n">01 · First to sew</div>
+          <h3>Trail pant</h3>
+          <p>Stretch-woven nylon. No membrane. Judgment retail <strong>$119–$139</strong>, between Ferrosi ($99–$110) and Terravia ($135–$139). Same price in every size.</p>
+        </article>
+        <article class="card">
+          <div class="n">02 · Beside it</div>
+          <h3>Trail shirt</h3>
+          <p>Woven nylon, 40–70 denier. Not a knit sun hoodie. Judgment <strong>$79–$99</strong>. If the duty is bad, this style stays small.</p>
+        </article>
+        <article class="card">
+          <div class="n">03 · The brand</div>
+          <h3>3-layer shell</h3>
+          <p>PFAS-free membrane and DWR. Cap hood. Pit zips. Judgment <strong>$229–$279</strong>. Under the Foray. Far under Gore.</p>
+        </article>
+      </div>
+      <p class="note">Men’s and women’s are two blocks. A women’s pant is not a men’s pant shrunk on a photocopier.</p>
+    </section>
+
+    <section class="slide" data-title="The site">
+      <p class="kicker">Where it is sold</p>
+      <div class="grid2">
+        <h2>The brand’s own site, from the first unit.</h2>
+        <div>
+          <p class="lede" style="margin-top:0">Direct keeps the retail dollar. That is what makes a small run possible. A factory price that dies at wholesale can still work on the site.</p>
+          <p class="note">A planning sketch, not a quote: around $70 to make a shell, sold near $249, can leave cash after cards, shipping, and returns. Nobody has quoted $70. Do not publish $249 because it looks tidy. REI is not the plan, and not the milestone.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Indore">
+      <p class="kicker">Where it is cut</p>
+      <h2>Indore can sew a pant. A taped shell is a different room.</h2>
+      <p class="lede">The city’s woven shops already make shirts and trousers. That is the head start for the pant and the shirt. Seam tape needs a hot-air machine and a trained operator. The first shell samples may be developed at a plant that already tapes, then brought to Indore on our pattern.</p>
+      <p class="note">India is the factory. It is not the story on the hangtag. No Himalayan costume. The founder stands on the line, tests in a real monsoon, and publishes the sheet.</p>
+    </section>
+
+    <section class="slide" data-title="Duty">
+      <p class="kicker">The number that decides the price</p>
+      <div class="ask">
+        <div>
+          <h2>Duty, not the wage, is the lever.</h2>
+          <p class="lede">Water-resistant synthetic outerwear has cleared near 7.1%. Miss that test and the same family of garments has cleared near 27.7% or 27.9%. That spread is larger than an Indore-versus-Vietnam wage story.</p>
+        </div>
+        <div>
+          <p class="figure">7.1<span>percent, if the garment passes the water-resistant test. A broker has to say so, this month, on these three constructions.</span></p>
+        </div>
+      </div>
+      <p class="note">Country duty on Indian goods changed four times between August 2025 and July 2026. A July 2026 notice put an extra 10% on India. Reconfirm before costing. Nothing else is safe until that note exists.</p>
+    </section>
+
+    <section class="slide" data-title="Proof">
+      <p class="kicker">What we will print</p>
+      <h2>A number only after the test that produced it.</h2>
+      <div class="fails" style="margin-top:28px">
+        <div>
+          <h3>On the card</h3>
+          <p>Fiber. Denier. PFAS-free, in writing. Hydrostatic head with the method, ISO 811, and the lot code. Where it was sewn. What a repair costs.</p>
+        </div>
+        <div>
+          <h3>Not on the card</h3>
+          <p>No Gore hangtag. No PFAS exemption. No Regenerative Organic mark on a nylon pant. No “UPF 50” copied off someone else’s hangtag. No lifetime warranty before we know the return rate.</p>
+        </div>
+      </div>
+      <p class="note">Regenerative Organic is a farm certificate for cotton, hemp, or wool. The first pant is stretch nylon. Sustainability here is the chemistry we refuse, the test we publish, and a repair price.</p>
+    </section>
+
+    <section class="slide" data-title="Clock">
+      <p class="kicker">When a stranger can buy one</p>
+      <table class="clock">
+        <tr><th>Now – Mar 2027</th><td>Duty opinion. Mill and factory shortlist. Benchmark garments on a table. Trademark screen. One-page specs. No production order.</td></tr>
+        <tr><th>Monsoon 2027</th><td>Prototypes worn in real rain in Madhya Pradesh. Kill what fails.</td></tr>
+        <tr><th>Fall 2027</th><td>Second prototype. Lab tests. A cost sheet with real quotes.</td></tr>
+        <tr><th>Spring 2028</th><td>First customer shirt and pant, on the site, only if the monsoon and the cost sheet pass.</td></tr>
+        <tr><th>Fall 2028</th><td>Shell, only if sealed samples from the actual line pass rain and the lab.</td></tr>
+      </table>
+      <p class="note">Shops are optional after a season of our own returns. An REI purchase order is not on this clock.</p>
+    </section>
+
+    <section class="slide" data-title="The check">
+      <p class="kicker">What a first check is for</p>
+      <div class="ask">
+        <div>
+          <h2>Reach a worn sample and a duty opinion.</h2>
+          <p class="lede">This company has no factory signed, no sample, and no test result with its name on it. The cash we can already price is small.</p>
+          <ul class="prices" style="margin-top:18px">
+            <li><span>Five industrial machines, installed <em>estimate</em></span><span class="num">$4,000–$5,500</span></li>
+            <li><span>Benchmark garments, men’s and women’s <em>at shelf</em></span><span class="num">about $1,000–$1,500</span></li>
+            <li><span>Lawyer, mill minimums, first sewn run</span><span class="num">unquoted</span></li>
+          </ul>
+        </div>
+        <div>
+          <p class="pill">No valuation</p>
+          <p class="lede">We will not name a round until the broker’s duty and a mill quote are on the same page. The check is to get there. It does not buy a factory, ads, or a Gore license.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="The name">
+      <p class="kicker">The mark</p>
+      <h2>MARL. One syllable. Rhymes with snarl.</h2>
+      <p class="lede">Plain wide caps. No mountain, no badge, no chevron. Marlboro is the neighbor Americans will hear if the mark gets cute, so it does not.</p>
+      <p class="note">marl.com is taken. marlequipment.com was unregistered on 18 October 2026 and may not be now. A web search is not a trademark clearance. A lawyer still has to look at US and India class 25 and 35, and at Marlboro and at TIBA + MARL, before a label is printed.</p>
+    </section>
+
+    <section class="slide" data-title="Close">
+      <p class="kicker">Ankur Thakur · Indore</p>
+      <h1 style="font-size:clamp(48px,8vw,112px)">The number, or it is not a sentence.</h1>
+      <p class="lede">If you want that card in the pocket of a jacket you would actually hike in, this is the company. It is early on purpose.</p>
+      <p class="note">Arrow keys move. G is the grid. Prices and duty lines are from October 2026 research and have to be re-read before anyone wires money.</p>
+    </section>
+  </main>
+
+  <nav class="rail" id="rail" aria-label="Slides"></nav>
+
+  <footer class="bottombar">
+    <div class="navbtns">
+      <button type="button" id="prev" aria-label="Previous">Prev</button>
+      <button type="button" id="next" aria-label="Next">Next</button>
+    </div>
+    <button type="button" class="ghost" id="gridbtn">Grid</button>
+    <span id="hint">← → &nbsp; G grid &nbsp; ? keys</span>
+  </footer>
+  <div class="progress" aria-hidden="true"><span id="bar"></span></div>
+
+  <div class="overview" id="overview">
+    <h2>All thirteen.</h2>
+    <div class="ovgrid" id="ovgrid"></div>
+  </div>
+  <div class="help" id="help">
+    <div>
+      <p class="kicker">Keys</p>
+      <p><kbd>→</kbd> <kbd>Space</kbd> next</p>
+      <p><kbd>←</kbd> back</p>
+      <p><kbd>G</kbd> grid · <kbd>Esc</kbd> close</p>
+      <p><kbd>Home</kbd> <kbd>End</kbd> ends of the deck</p>
+      <p style="margin-top:18px"><button type="button" class="ghost" id="closehelp">Close</button></p>
+    </div>
+  </div>
+
+<script>
+  const slides = [...document.querySelectorAll(".slide")];
+  const rail = document.getElementById("rail");
+  const ov = document.getElementById("ovgrid");
+  const count = document.getElementById("count");
+  const bar = document.getElementById("bar");
+  let i = 0;
+
+  slides.forEach((s, n) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.innerHTML = "<i></i>";
+    b.title = s.dataset.title;
+    b.addEventListener("click", () => go(n));
+    rail.appendChild(b);
+    const o = document.createElement("button");
+    o.type = "button";
+    o.innerHTML = "<small>" + String(n + 1).padStart(2, "0") + "</small>" + s.dataset.title;
+    o.addEventListener("click", () => { document.body.classList.remove("ov"); go(n); });
+    ov.appendChild(o);
+  });
+
+  function go(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle("on", k === i));
+    [...rail.children].forEach((b, k) => b.classList.toggle("on", k === i));
+    [...ov.children].forEach((b, k) => b.classList.toggle("on", k === i));
+    count.textContent = String(i + 1).padStart(2, "0") + " / " + String(slides.length).padStart(2, "0");
+    bar.style.width = ((i + 1) / slides.length * 100) + "%";
+    history.replaceState(null, "", "#s" + String(i + 1).padStart(2, "0"));
+  }
+
+  document.getElementById("next").onclick = () => go(i + 1);
+  document.getElementById("prev").onclick = () => go(i - 1);
+  document.getElementById("gridbtn").onclick = () => document.body.classList.toggle("ov");
+  document.getElementById("closehelp").onclick = () => document.body.classList.remove("help");
+
+  addEventListener("keydown", (e) => {
+    if (["ArrowRight", "ArrowDown", "PageDown", " "].includes(e.key)) { e.preventDefault(); go(i + 1); }
+    else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); go(i - 1); }
+    else if (e.key === "Home") go(0);
+    else if (e.key === "End") go(slides.length - 1);
+    else if (e.key === "g" || e.key === "G") document.body.classList.toggle("ov");
+    else if (e.key === "?") document.body.classList.toggle("help");
+    else if (e.key === "Escape") document.body.classList.remove("ov", "help");
+  });
+
+  let x0 = null;
+  addEventListener("touchstart", (e) => { x0 = e.changedTouches[0].clientX; }, { passive: true });
+  addEventListener("touchend", (e) => {
+    if (x0 == null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50) go(i + (dx < 0 ? 1 : -1));
+    x0 = null;
+  }, { passive: true });
+
+  const start = location.hash.match(/^#s(\d+)/);
+  go(start ? Number(start[1]) - 1 : 0);
+</script>
+</body>
+</html>
